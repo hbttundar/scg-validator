@@ -1,0 +1,151 @@
+# Options for analysis running
+run:
+  # Timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  # Include test files or not, default is true
+  tests: true
+  # Default concurrency is a available CPU number
+  concurrency: 4
+
+# Output configuration options
+output:
+  # Formats: colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
+  formats:
+    - format: colored-line-number
+  # Print lines of code with issue, default is true
+  print-issued-lines: true
+  # Print linter name in the end of issue text, default is true
+  print-linter-name: true
+
+# All available settings of specific linters
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    check-type-assertions: true
+  govet:
+    # check-shadowing is deprecated, using shadow linter instead
+  gocyclo:
+    # Minimal code complexity to report, 30 by default
+    min-complexity: 15
+  dupl:
+    # Tokens count to trigger issue, 150 by default
+    threshold: 100
+  goconst:
+    # Minimal length of string constant, 3 by default
+    min-len: 3
+    # Minimal occurrences count to trigger, 3 by default
+    min-occurrences: 3
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    locale: US
+  lll:
+    # Max line length, lines longer will be reported. Default is 120.
+    line-length: 120
+  unused:
+    # Treat code as a program (not a library) and report unused exported identifiers
+    check-exported: false
+  unparam:
+    # Inspect exported functions, default is false
+    check-exported: false
+  nakedret:
+    # Make an issue if func has more lines of code than this setting and it has naked returns
+    max-func-lines: 30
+  prealloc:
+    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them
+    simple: true
+    range-loops: true
+    for-loops: true
+  gosec:
+    # Severity level for gosec findings
+    severity: medium
+    # Confidence level for gosec findings
+    confidence: medium
+    # Exclude generated files
+    exclude-generated: true
+    # Exclude test files
+    exclude-tests: true
+    # Specify rules to include
+    includes:
+      - G101  # Look for hard coded credentials
+      - G102  # Bind to all interfaces
+      - G104  # Audit errors not checked
+      - G106  # SSH weak algorithms
+      - G107  # URL with credentials
+      - G201  # SQL query construction
+      - G202  # SQL query construction
+      - G203  # Template with unescaped data
+      - G204  # Command execution
+      - G301  # Poor file permissions
+      - G302  # Poor file permissions
+      - G303  # Sensitive data in temp file
+      - G304  # File path provided as taint input
+      - G305  # File path traversal
+      - G306  # Write to file with insecure permissions
+      - G307  # Deferring method with error return
+      - G401  # Crypto weak algorithm
+      - G402  # TLS validation
+      - G403  # Weak random number
+      - G404  # Insecure random number
+      - G501  # Blacklisted crypto algorithm
+      - G502  # Insecure import
+      - G503  # Insecure crypto algorithm
+      - G504  # Insecure crypto algorithm
+      - G505  # Insecure crypto algorithm
+    # Config for specific rules
+    config:
+      G101:
+        # Pattern for detecting hardcoded credentials
+        pattern: "(?i)((password|passwd|pwd|secret|token|apikey|api_key|access_key|auth_token)\\s*[:=]\\s*['\"]([^'\"]{8,}))"
+        ignore_entropy: false
+      G102:
+        # Pattern for detecting hardcoded credentials in JSON
+        pattern: "(?i)(['\"](?:api|token|key|secret|pass|password)['\"]:[ \\t]*['\"][^'\"]+['\"])"
+
+linters:
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - revive
+    - copyloopvar
+  disable:
+    - prealloc
+  # Run only fast linters from enabled linters set (first run won't be fast)
+  fast: false
+
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec

@@ -1,10 +1,6 @@
 # SCG Validator
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/hbttundar/scg-validator)](https://goreportcard.com/report/github.com/hbttundar/scg-validator)
-[![GoDoc](https://godoc.org/github.com/hbttundar/scg-validator?status.svg)](https://godoc.org/github.com/hbttundar/scg-validator)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-A powerful, flexible validation package for Go applications, inspired by Laravel's validation system. SCG Validator provides a simple, intuitive API for validating data in your Go applications with minimal boilerplate code.
+A comprehensive, extensible validation library for Go applications inspired by Laravel's validation system. SCG Validator provides a rich set of validation rules with support for custom rules, conditional validation, and flexible error handling.
 
 ## Table of Contents
 
@@ -12,29 +8,24 @@ A powerful, flexible validation package for Go applications, inspired by Laravel
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Available Validation Rules](#available-validation-rules)
+- [Usage Examples](#usage-examples)
+- [Custom Rules](#custom-rules)
 - [Custom Error Messages](#custom-error-messages)
-- [Custom Attribute Names](#custom-attribute-names)
 - [Database Validation](#database-validation)
-- [Array and Map Validation](#array-and-map-validation)
-- [Custom Validation Rules](#custom-validation-rules)
-- [Advanced Usage](#advanced-usage)
+- [Development Tools](#development-tools)
 - [Testing](#testing)
 - [Contributing](#contributing)
-- [Development](#development)
-- [Versioning](#versioning)
 - [License](#license)
 
 ## Features
 
-- Laravel-style validation syntax
-- Zero external dependencies
-- Extensive set of validation rules (40+ built-in rules)
-- Custom error messages with parameter substitution
-- Custom attribute names
-- Conditional validation
-- Array and map validation
-- Database presence verification
-- Extensible architecture for custom rules
+- **Rich Rule Set**: 50+ built-in validation rules covering common use cases
+- **Custom Rules**: Easy to add custom validation logic
+- **Conditional Validation**: Rules that depend on other field values
+- **Flexible Error Messages**: Customizable error messages with placeholders
+- **Database Integration**: Built-in support for unique/exists validation
+- **Type Safety**: Strong typing with interface-based design
+- **Performance**: Optimized for high-performance applications
 
 ## Installation
 
@@ -49,598 +40,408 @@ package main
 
 import (
     "fmt"
-    "github.com/hbttundar/scg-validator"
+    "github.com/hbttundar/scg-validator/validator"
+    "github.com/hbttundar/scg-validator/contract"
 )
 
 func main() {
-    // Create a new validator
+    // Create a validator instance
     v := validator.New()
-
+    
     // Data to validate
-    data := map[string]any{
-        "username": "johndoe",
+    data := map[string]interface{}{
+        "name":  "John Doe",
         "email": "john@example.com",
-        "age": 25,
-        "items": []string{"item1", "item2"},
+        "age":   25,
     }
-
-    // Define validation rules
+    
+    // Validation rules
     rules := map[string]string{
-        "username": "required|alpha",
+        "name":  "required|string|min:2|max:50",
         "email": "required|email",
-        "age": "required|numeric|gt:18",
-        "items": "required|array",
+        "age":   "required|integer|min:18|max:120",
     }
-
-    // Validate the data
-    err := v.Validate(data, rules)
-    if err != nil {
-        // Handle validation errors
-        validationErrors := err.(validator.Errors)
-        for field, messages := range validationErrors {
-            for _, message := range messages {
-                fmt.Printf("%s: %s\n", field, message)
+    
+    // Perform validation
+    result := v.Validate(contract.NewSimpleDataProvider(data), rules)
+    
+    if !result.IsValid() {
+        fmt.Println("Validation failed:")
+        for field, errors := range result.Errors() {
+            for _, err := range errors {
+                fmt.Printf("- %s: %s\n", field, err)
             }
         }
         return
     }
-
+    
     fmt.Println("Validation passed!")
-}
-```
-
-## Examples
-
-Here are some practical examples of how to use SCG Validator in different scenarios:
-
-### Example 1: User Registration Form
-
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/hbttundar/scg-validator"
-)
-
-func main() {
-    v := validator.New(
-        validator.WithCustomMessages(map[string]string{
-            "password.min": "Password must be at least :param0 characters long",
-            "password.password": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
-            "email.email": "Please provide a valid email address",
-        }),
-        validator.WithCustomAttributes(map[string]string{
-            "password_confirmation": "Password Confirmation",
-        }),
-    )
-
-    // User registration data
-    data := map[string]any{
-        "first_name": "John",
-        "last_name": "Doe",
-        "email": "john.doe@example.com",
-        "password": "SecureP@ss123",
-        "password_confirmation": "SecureP@ss123",
-        "age": 25,
-        "terms_accepted": true,
-    }
-
-    // Validation rules
-    rules := map[string]string{
-        "first_name": "required|alpha|min:2|max:50",
-        "last_name": "required|alpha|min:2|max:50",
-        "email": "required|email",
-        "password": "required|min:8|password",
-        "password_confirmation": "required|same:password",
-        "age": "required|numeric|min:18",
-        "terms_accepted": "required|accepted",
-    }
-
-    // Validate
-    err := v.Validate(data, rules)
-    if err != nil {
-        validationErrors := err.(validator.Errors)
-        for field, messages := range validationErrors {
-            for _, message := range messages {
-                fmt.Printf("%s: %s\n", field, message)
-            }
-        }
-        return
-    }
-
-    fmt.Println("Registration successful!")
-}
-```
-
-### Example 2: Product Creation with Conditional Validation
-
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/hbttundar/scg-validator"
-)
-
-func main() {
-    v := validator.New()
-
-    // Product data
-    data := map[string]any{
-        "name": "Smartphone",
-        "category": "electronics",
-        "price": 599.99,
-        "stock": 100,
-        "is_digital": false,
-        "weight": 0.3, // in kg
-        "dimensions": map[string]float64{
-            "length": 15.0,
-            "width": 7.5,
-            "height": 0.8,
-        },
-    }
-
-    // Validation rules
-    rules := map[string]string{
-        "name": "required|string|min:3|max:100",
-        "category": "required|in:electronics,clothing,books,home,food",
-        "price": "required|numeric|gt:0",
-        "stock": "required|integer|min:0",
-        "is_digital": "required|boolean",
-        "weight": "required_if:is_digital,false|numeric|gt:0",
-        "dimensions.length": "required_if:is_digital,false|numeric|gt:0",
-        "dimensions.width": "required_if:is_digital,false|numeric|gt:0",
-        "dimensions.height": "required_if:is_digital,false|numeric|gt:0",
-    }
-
-    // Validate
-    err := v.Validate(data, rules)
-    if err != nil {
-        validationErrors := err.(validator.Errors)
-        for field, messages := range validationErrors {
-            for _, message := range messages {
-                fmt.Printf("%s: %s\n", field, message)
-            }
-        }
-        return
-    }
-
-    fmt.Println("Product validation successful!")
-}
-```
-
-### Example 3: API Request Validation
-
-```go
-package main
-
-import (
-    "encoding/json"
-    "fmt"
-    "github.com/hbttundar/scg-validator"
-    "net/http"
-)
-
-// SearchRequest represents a search API request
-type SearchRequest struct {
-    Query       string   `json:"query"`
-    Filters     []string `json:"filters"`
-    Page        int      `json:"page"`
-    PerPage     int      `json:"per_page"`
-    SortBy      string   `json:"sort_by"`
-    SortOrder   string   `json:"sort_order"`
-}
-
-func validateSearchRequest(w http.ResponseWriter, r *http.Request) {
-    // Parse JSON request
-    var req SearchRequest
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid JSON", http.StatusBadRequest)
-        return
-    }
-
-    // Convert struct to map for validation
-    data := map[string]any{
-        "query":       req.Query,
-        "filters":     req.Filters,
-        "page":        req.Page,
-        "per_page":    req.PerPage,
-        "sort_by":     req.SortBy,
-        "sort_order":  req.SortOrder,
-    }
-
-    // Create validator
-    v := validator.New()
-
-    // Define validation rules
-    rules := map[string]string{
-        "query":       "required|string|min:3",
-        "filters":     "array",
-        "page":        "required|integer|min:1",
-        "per_page":    "required|integer|in:10,25,50,100",
-        "sort_by":     "required|in:relevance,date,price",
-        "sort_order":  "required|in:asc,desc",
-    }
-
-    // Validate
-    if err := v.Validate(data, rules); err != nil {
-        // Convert validation errors to JSON
-        validationErrors := err.(validator.Errors)
-        errorResponse := map[string]any{
-            "status": "error",
-            "errors": validationErrors,
-        }
-
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(errorResponse)
-        return
-    }
-
-    // Process valid request
-    response := map[string]string{
-        "status": "success",
-        "message": "Search request is valid",
-    }
-
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
-}
-
-func main() {
-    http.HandleFunc("/search", validateSearchRequest)
-    fmt.Println("Server started on :8080")
-    http.ListenAndServe(":8080", nil)
-}
-```
-
-### Example 4: Custom Validation Rule
-
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/hbttundar/scg-validator"
-    "strings"
-)
-
-// Custom rule to validate a username format
-type UsernameFormatRule struct{}
-
-func (r *UsernameFormatRule) Name() string {
-    return "username_format"
-}
-
-func (r *UsernameFormatRule) Validate(field string, value any, params []string, data map[string]any) bool {
-    username, ok := value.(string)
-    if !ok {
-        return false
-    }
-
-    // Username must:
-    // 1. Start with a letter
-    // 2. Contain only letters, numbers, and underscores
-    // 3. Be between 3 and 20 characters
-
-    if len(username) < 3 || len(username) > 20 {
-        return false
-    }
-
-    firstChar := username[0]
-    if !((firstChar >= 'a' && firstChar <= 'z') || (firstChar >= 'A' && firstChar <= 'Z')) {
-        return false
-    }
-
-    for _, char := range username {
-        if !((char >= 'a' && char <= 'z') || 
-             (char >= 'A' && char <= 'Z') || 
-             (char >= '0' && char <= '9') || 
-             char == '_') {
-            return false
-        }
-    }
-
-    return true
-}
-
-func (r *UsernameFormatRule) Message() string {
-    return "The :attribute must be 3-20 characters, start with a letter, and contain only letters, numbers, and underscores."
-}
-
-func main() {
-    // Create validator and register custom rule
-    v := validator.New()
-    v.RegisterRule("username_format", "The :attribute has an invalid format.", func(ctx *validator.ValidationContext) error {
-        rule := &UsernameFormatRule{}
-        if !rule.Validate(ctx.Field, ctx.Value, ctx.Params, ctx.Data) {
-            return fmt.Errorf(rule.Message())
-        }
-        return nil
-    })
-
-    // Data to validate
-    data := map[string]any{
-        "username": "john_doe123",
-        "display_name": "John Doe",
-    }
-
-    // Validation rules
-    rules := map[string]string{
-        "username": "required|username_format",
-        "display_name": "required|string|min:2|max:50",
-    }
-
-    // Validate
-    err := v.Validate(data, rules)
-    if err != nil {
-        validationErrors := err.(validator.Errors)
-        for field, messages := range validationErrors {
-            for _, message := range messages {
-                fmt.Printf("%s: %s\n", field, message)
-            }
-        }
-        return
-    }
-
-    fmt.Println("Validation passed with custom rule!")
 }
 ```
 
 ## Available Validation Rules
 
-### Presence & Type
+### Basic Rules
+- `required` - Field must be present and not empty
+- `nullable` - Field can be null/empty
+- `present` - Field must be present in input
+- `filled` - Field must not be empty if present
+- `sometimes` - Apply validation only if field is present
 
-- `required`: The field must be present and not empty.
-- `boolean`: The field must be a boolean value.
-- `numeric`: The field must be a numeric value.
-- `array`: The field must be an array, slice, or map.
-- `integer`: The field must be an integer.
-- `string`: The field must be a string.
-- `json`: The field must be a valid JSON string.
-- `nullable`: The field is optional and can be null.
-- `accepted`: The field must be "yes", "on", 1, or true.
+### String Rules
+- `string` - Must be a string
+- `alpha` - Only alphabetic characters
+- `alphanum` - Only alphanumeric characters
+- `alpha_dash` - Only alphanumeric, dashes, and underscores
+- `ascii` - Only ASCII characters
+- `lowercase` - Must be lowercase
+- `uppercase` - Must be uppercase
+- `slug` - Must be a valid slug
 
-### Format
+### Numeric Rules
+- `numeric` - Must be numeric
+- `integer` - Must be an integer
+- `decimal:min,max` - Must have specific decimal places
+- `multiple_of:value` - Must be a multiple of value
 
-- `email`: The field must be a valid email address.
-- `uuid`: The field must be a valid UUID.
-- `alpha`: The field must only contain letters.
-- `alphanum`: The field must only contain letters and numbers.
-- `date`: The field must be a valid date.
-- `url`: The field must be a valid URL.
-- `ip`: The field must be a valid IP address.
-- `regex`: The field must match the given regular expression.
-- `password`: The field must meet password complexity requirements.
+### Comparison Rules
+- `min:value` - Minimum value/length
+- `max:value` - Maximum value/length
+- `size:value` - Exact size/length
+- `between:min,max` - Between min and max values
+- `gt:value` - Greater than value
+- `gte:value` - Greater than or equal to value
+- `lt:value` - Less than value
+- `lte:value` - Less than or equal to value
 
-### File Validation
+### Format Rules
+- `email` - Valid email address
+- `url` - Valid URL
+- `uuid` - Valid UUID
+- `ip` - Valid IP address (IPv4, IPv6, or MAC)
+- `ipv4` - Valid IPv4 address
+- `ipv6` - Valid IPv6 address
+- `mac` - Valid MAC address
+- `json` - Valid JSON string
+- `regex:pattern` - Matches regex pattern
 
-- `file`: The field must be a file.
-- `image`: The field must be an image file.
-- `mimes`: The field must be a file of the specified MIME types.
+### Date Rules
+- `date` - Valid date
+- `after:date` - After specified date
+- `before:date` - Before specified date
+- `after_or_equal:date` - After or equal to date
+- `before_or_equal:date` - Before or equal to date
+- `date_equals:date` - Equal to specified date
 
-### Size
+### Collection Rules
+- `list` - Must be a list/array
+- `map` - Must be a map/object
+- `in:value1,value2` - Must be one of specified values
+- `not_in:value1,value2` - Must not be one of specified values
 
-- `size`: The field must have the specified size.
-- `between`: The field must be between the specified minimum and maximum values.
-- `min`: The field must be at least the specified value.
-- `max`: The field must not be greater than the specified value.
-- `gt`: The field must be greater than the specified value.
-- `lt`: The field must be less than the specified value.
+### File Rules
+- `file` - Must be a file upload
+- `image` - Must be an image file
+- `mimes:ext1,ext2` - Must have specified MIME types
 
-### Inclusion & Comparison
+### Conditional Rules
+- `required_if:field,value` - Required if another field equals value
+- `required_unless:field,value` - Required unless another field equals value
+- `required_with:field` - Required if another field is present
+- `required_without:field` - Required if another field is absent
+- `required_with_all:field1,field2` - Required if all fields are present
+- `required_without_all:field1,field2` - Required if all fields are absent
 
-- `in`: The field must be included in the specified list of values.
-- `not_in`: The field must not be included in the specified list of values.
-- `confirmed`: The field must have a matching confirmation field.
+### Database Rules
+- `exists:table,column` - Value must exist in database
+- `unique:table,column` - Value must be unique in database
 
-### Conditional Validation
+## Usage Examples
 
-- `required_if`: The field is required when another field has a specific value.
-- `required_unless`: The field is required unless another field has a specific value.
-- `required_with`: The field is required when another field is present.
-- `required_without`: The field is required when another field is not present.
-
-### Database
-
-- `unique`: The field must be unique in the specified database table.
-
-## Custom Error Messages
-
-You can provide custom error messages for specific fields and rules:
-
-```go
-v := validator.New(
-    validator.WithCustomMessages(map[string]string{
-        "email.required": "Please provide your email address",
-        "age.gt": "You must be over :param0 years old",
-    }),
-)
-```
-
-## Custom Attribute Names
-
-You can provide custom attribute names for fields:
-
-```go
-v := validator.New(
-    validator.WithCustomAttributes(map[string]string{
-        "email": "Email Address",
-        "first_name": "First Name",
-    }),
-)
-```
-
-## Database Validation
-
-For database validation rules like `unique`, you need to provide a presence verifier:
+### Basic Validation
 
 ```go
-// Implement the PresenceVerifier interface
-type MyDBVerifier struct {
-    // Your database connection
-}
-
-func (v *MyDBVerifier) Exists(table, column string, value any, excludeIDColumn, excludeIDValue string) (bool, error) {
-    // Implement the logic to check if the value exists in the database
-}
-
-// Create a validator with the presence verifier
-v := validator.New(
-    validator.WithPresenceVerifier(&MyDBVerifier{}),
-)
-```
-
-## Array and Map Validation
-
-The `array` validation rule checks if a field is an array, slice, or map:
-
-```go
-data := map[string]any{
-    "items": []string{"item1", "item2"},
-    "properties": map[string]string{"key1": "value1", "key2": "value2"},
-}
-
-rules := map[string]string{
-    "items": "array",
-    "properties": "array",
-}
-```
-
-## Custom Validation Rules
-
-You can extend SCG Validator with your own custom validation rules by implementing the `Rule` interface:
-
-```go
-// Implement the Rule interface
-type MyCustomRule struct{}
-
-func (r *MyCustomRule) Name() string {
-    return "custom_rule"
-}
-
-func (r *MyCustomRule) Validate(field string, value any, params []string, data map[string]any) bool {
-    // Implement your validation logic here
-    // Return true if validation passes, false otherwise
-    return true
-}
-
-func (r *MyCustomRule) Message() string {
-    return "The :attribute failed the custom validation rule."
-}
-
-// Register your custom rule with the validator
 v := validator.New()
-v.RegisterRule(&MyCustomRule{})
 
-// Use your custom rule
-rules := map[string]string{
-    "field": "required|custom_rule",
+data := map[string]interface{}{
+    "username": "john_doe",
+    "password": "secret123",
+    "confirm_password": "secret123",
 }
-```
 
-## Advanced Usage
+rules := map[string]string{
+    "username": "required|alpha_dash|min:3|max:20",
+    "password": "required|min:8",
+    "confirm_password": "required|same:password",
+}
+
+result := v.Validate(contract.NewSimpleDataProvider(data), rules)
+```
 
 ### Conditional Validation
 
-You can apply validation rules conditionally:
-
 ```go
-data := map[string]any{
+data := map[string]interface{}{
     "user_type": "admin",
     "admin_code": "12345",
+    "regular_field": "value",
 }
 
 rules := map[string]string{
     "user_type": "required|in:admin,user",
     "admin_code": "required_if:user_type,admin|numeric",
+    "regular_field": "required_unless:user_type,admin",
 }
 ```
 
-### Nested Data Validation
-
-You can validate nested data structures using dot notation:
+### Array and Nested Data Validation
 
 ```go
-data := map[string]any{
-    "user": map[string]any{
-        "name": "John Doe",
-        "email": "john@example.com",
+data := map[string]interface{}{
+    "users": []map[string]interface{}{
+        {"name": "John", "email": "john@example.com"},
+        {"name": "Jane", "email": "jane@example.com"},
+    },
+    "settings": map[string]interface{}{
+        "theme": "dark",
+        "notifications": true,
     },
 }
 
 rules := map[string]string{
-    "user.name": "required|string",
-    "user.email": "required|email",
+    "users": "required|list",
+    "users.*.name": "required|string|min:2",
+    "users.*.email": "required|email",
+    "settings.theme": "required|in:light,dark",
+    "settings.notifications": "required|boolean",
 }
+```
+
+## Custom Rules
+
+Create custom validation rules by implementing the `contract.Rule` interface:
+
+```go
+type UppercaseRule struct {
+    common.BaseRule
+}
+
+func NewUppercaseRule() (contract.Rule, error) {
+    return &UppercaseRule{
+        BaseRule: common.NewBaseRule("uppercase", "The :attribute must be uppercase", nil),
+    }, nil
+}
+
+func (r *UppercaseRule) Validate(ctx contract.RuleContext) error {
+    value, ok := ctx.Value().(string)
+    if !ok {
+        return fmt.Errorf("value must be a string")
+    }
+    
+    if strings.ToUpper(value) != value {
+        return fmt.Errorf("the :attribute must be uppercase")
+    }
+    
+    return nil
+}
+
+func (r *UppercaseRule) Name() string {
+    return "uppercase"
+}
+
+// Register the custom rule
+v := validator.NewWithOptions(
+    rules.WithCustomRule("uppercase", func(params []string) (contract.Rule, error) {
+        return NewUppercaseRule()
+    }),
+)
+```
+
+## Custom Error Messages
+
+### Global Message Override
+
+```go
+v := validator.NewWithOptions(
+    rules.WithCustomMessage("required", "The :attribute field is mandatory"),
+    rules.WithCustomMessage("email", "Please provide a valid email address"),
+)
+```
+
+### Per-Validation Messages
+
+```go
+messages := map[string]string{
+    "email.required": "Email is required",
+    "email.email": "Email format is invalid",
+    "password.min": "Password must be at least 8 characters",
+}
+
+result := v.ValidateWithMessages(data, rules, messages)
+```
+
+### Custom Field Names
+
+```go
+v.SetAttribute("email", "Email Address")
+v.SetAttribute("password", "Password")
+// Error messages will use "Email Address" instead of "email"
+```
+
+## Database Validation
+
+For `exists` and `unique` rules, implement the `PresenceVerifier` interface:
+
+```go
+type DatabaseVerifier struct {
+    db *sql.DB
+}
+
+func (d *DatabaseVerifier) Exists(table, field string, value interface{}) (bool, error) {
+    query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s = ?", table, field)
+    var count int
+    err := d.db.QueryRow(query, value).Scan(&count)
+    return count > 0, err
+}
+
+func (d *DatabaseVerifier) Unique(table, field string, value interface{}) (bool, error) {
+    exists, err := d.Exists(table, field, value)
+    return !exists, err
+}
+
+// Register the verifier
+database.RegisterPresenceVerifier("users", &DatabaseVerifier{db: db})
+
+// Use in validation
+rules := map[string]string{
+    "email": "required|email|unique:users,email",
+    "category_id": "required|exists:categories,id",
+}
+```
+
+## Development Tools
+
+This project includes a comprehensive development helper script (`./scg`) with the following commands:
+
+### Available Commands
+
+```bash
+# Build the project
+./scg build
+
+# Run tests (optionally for specific package)
+./scg test [package]
+
+# Run benchmarks
+./scg bench [package]
+
+# Run linter
+./scg lint
+
+# Run linter and fix issues
+./scg lint-fix
+
+# Format code (gofmt + goimports)
+./scg format [file]
+
+# Run security checks
+./scg security
+
+# Clean build cache
+./scg clean
+
+# Manage dependencies
+./scg deps
+
+# Generate coverage report
+./scg coverage
+
+# Generate documentation
+./scg docs
+
+# Run all CI checks
+./scg ci
+
+# Install development tools
+./scg install-tools
+```
+
+### Examples
+
+```bash
+# Run tests for a specific package
+./scg test ./rules/types/string
+
+# Format a specific file
+./scg format rules/types/string/alpha.go
+
+# Run full CI pipeline locally
+./scg ci
 ```
 
 ## Testing
 
-To run the tests for SCG Validator:
+Run the test suite:
 
 ```bash
-go test ./... -v
+# Run all tests
+./scg test
+
+# Run tests with coverage
+./scg coverage
+
+# Run benchmarks
+./scg bench
 ```
 
-For test coverage:
-
-```bash
-go test ./... -coverprofile=coverage.out
-go tool cover -html=coverage.out
-```
+The project maintains high test coverage with comprehensive unit tests for all validation rules.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please follow these guidelines:
 
-## Development
+1. **Fork the repository** and create a feature branch
+2. **Write tests** for new functionality
+3. **Follow Go conventions** and run `./scg format`
+4. **Run the full test suite** with `./scg ci`
+5. **Update documentation** as needed
+6. **Submit a pull request** with a clear description
 
-### CI/CD Pipeline
-
-This project uses GitHub Actions for continuous integration and continuous deployment. The pipeline includes:
-
-- Building and testing the code
-- Linting with golangci-lint
-- Security scanning with Gosec and Nancy
-
-The configuration for the CI/CD pipeline is in the `.github/workflows/ci.yml` file.
-
-### Linting
-
-This project uses golangci-lint for code quality checks. The configuration is in the `.golangci.yml` file.
-
-To run the linter locally:
+### Development Setup
 
 ```bash
-golangci-lint run
+# Clone the repository
+git clone https://github.com/hbttundar/scg-validator.git
+cd scg-validator
+
+# Install development tools
+./scg install-tools
+
+# Run tests to ensure everything works
+./scg test
+
+# Make your changes and run CI checks
+./scg ci
 ```
 
-### Security Scanning
+### Code Style
 
-This project uses Gosec for security scanning. The configuration is integrated into the `.golangci.yml` file for a unified linting and security scanning approach.
-
-To run the security scanner through golangci-lint:
-
-```bash
-golangci-lint run --enable=gosec
-```
-
-Alternatively, you can run gosec directly:
-
-```bash
-gosec ./...
-```
-
-## Versioning
-
-This project follows [Semantic Versioning](https://semver.org/). The version format is `MAJOR.MINOR.PATCH`:
-
-- `MAJOR` version increments for incompatible API changes
-- `MINOR` version increments for backwards-compatible functionality additions
-- `PATCH` version increments for backwards-compatible bug fixes
+- Follow standard Go formatting (`gofmt`, `goimports`)
+- Write comprehensive tests for new features
+- Document public APIs with clear examples
+- Use meaningful variable and function names
+- Keep functions focused and concise
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Inspired by Laravel's validation system
+- Built with Go's strong typing and interface system
+- Designed for high-performance applications
+
+---
+
+For more examples and advanced usage, see the [example](example/) directory.

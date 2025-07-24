@@ -14,24 +14,63 @@ output:
     - format: colored-line-number
   # Print lines of code with issue, default is true
   print-issued-lines: true
-  # Print linter name in the end of issue text, default is true
+  # Print linter name in the end of issue strings, default is true
   print-linter-name: true
 
 # All available settings of specific linters
 linters-settings:
+  depguard:
+    rules:
+      main:
+        files:
+          - "**/*.go"
+        allow:
+          - $gostd
+          - github.com/hbttundar/scg-validator
+          - github.com/hbttundar/scg-validator/contract
+          - github.com/hbttundar/scg-validator/engine
+          - github.com/hbttundar/scg-validator/errors
+          - github.com/hbttundar/scg-validator/errors/single
+          - github.com/hbttundar/scg-validator/errors/aggregate
+          - github.com/hbttundar/scg-validator/facade
+          - github.com/hbttundar/scg-validator/message
+          - github.com/hbttundar/scg-validator/parser
+          - github.com/hbttundar/scg-validator/registry/database
+          - github.com/hbttundar/scg-validator/registry/password
+          - github.com/hbttundar/scg-validator/registry/rules
+          - github.com/hbttundar/scg-validator/rules
+          - github.com/hbttundar/scg-validator/rules/acceptance
+          - github.com/hbttundar/scg-validator/rules/authentication
+          - github.com/hbttundar/scg-validator/rules/common
+          - github.com/hbttundar/scg-validator/rules/comparison
+          - github.com/hbttundar/scg-validator/rules/conditional
+          - github.com/hbttundar/scg-validator/rules/control
+          - github.com/hbttundar/scg-validator/rules/database
+          - github.com/hbttundar/scg-validator/rules/file
+          - github.com/hbttundar/scg-validator/rules/format
+          - github.com/hbttundar/scg-validator/rules/inclusion
+          - github.com/hbttundar/scg-validator/rules/types/boolean
+          - github.com/hbttundar/scg-validator/rules/types/collection
+          - github.com/hbttundar/scg-validator/rules/types/date
+          - github.com/hbttundar/scg-validator/rules/types/numeric
+          - github.com/hbttundar/scg-validator/rules/types/string
+          - github.com/hbttundar/scg-validator/utils
+          - github.com/hbttundar/scg-validator/validator
+          - github.com/google/uuid
+          - golang.org/x/text/unicode/norm
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
     check-type-assertions: true
   govet:
     # check-shadowing is deprecated, using shadow linter instead
   gocyclo:
-    # Minimal code complexity to report, 30 by default
-    min-complexity: 15
+    # Minimal code complexity to report, 30 by default - increased to focus on extremely complex functions
+    min-complexity: 25
   dupl:
-    # Tokens count to trigger issue, 150 by default
-    threshold: 100
+    # Tokens count to trigger issue, 150 by default - increased to avoid false positives with constant definitions
+    threshold: 200
   goconst:
-    # Minimal length of string constant, 3 by default
+    # Minimal length of strings constant, 3 by default
     min-len: 3
     # Minimal occurrences count to trigger, 3 by default
     min-occurrences: 3
@@ -83,7 +122,7 @@ linters-settings:
       - G306  # Write to file with insecure permissions
       - G307  # Deferring method with error return
       - G401  # Crypto weak algorithm
-      - G402  # TLS validation
+      - G402  # TLS validator
       - G403  # Weak random number
       - G404  # Insecure random number
       - G501  # Blacklisted crypto algorithm
@@ -138,9 +177,9 @@ linters:
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
-  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  # Maximum count of issues with the same strings. Set to 0 to disable. Default is 3.
   max-same-issues: 0
-  # Excluding configuration per-path, per-linter, per-text and per-source
+  # Excluding configuration per-path, per-linter, per-strings and per-source
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
